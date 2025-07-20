@@ -1,0 +1,44 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load your dataset
+df = pd.read_csv("sales_data.csv")
+
+# Filter by 'Others' and valid sales
+df_others = df[(df['category'] == "Others") & (df['is_valid'] == 1)]
+
+# Extract year
+df_others['year'] = pd.to_datetime(df_others['order_date']).dt.year
+
+# Aggregate qty_ordered by product and year
+sales_2021 = df_others[df_others['year'] == 2021].groupby('sku_name')['qty_ordered'].sum().reset_index().rename(columns={'qty_ordered':'qty_2021'})
+sales_2022 = df_others[df_others['year'] == 2022].groupby('sku_name')['qty_ordered'].sum().reset_index().rename(columns={'qty_ordered':'qty_2022'})
+
+# Merge datasets
+merged = pd.merge(sales_2021, sales_2022, on='sku_name', how='outer').fillna(0)
+
+# Calculate differences and percentage change
+merged['sales_diff'] = merged['qty_2022'] - merged['qty_2021']
+merged['pct_change'] = ((merged['sales_diff']) / merged['qty_2021'].replace(0,1)) * 100  # Avoid division by zero
+
+# Classification
+def classify(x):
+    if x < -10:
+        return 'DOWN'
+    elif x > 10:
+        return 'UP'
+    else:
+        return 'FAIR'
+merged['class'] = merged['pct_change'].apply(classify)
+
+# Top 20 products with largest decrease
+top20_down = merged.sort_values('sales_diff').head(20)
+
+# Horizontal bar chart
+plt.figure(figsize=(8,6))
+plt.barh(top20_down['sku_name'], top20_down['sales_diff'], color='red')
+plt.xlabel('Decrease in Sales (Qty)')
+plt.title('Top 20 Products with Largest Sales Decrease ("Others" Category)')
+plt.tight_layout()
+plt.savefig("largest_decrease.png")
+plt.show()
