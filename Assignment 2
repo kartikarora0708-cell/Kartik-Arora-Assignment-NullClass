@@ -1,0 +1,23 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load data
+df = pd.read_csv('data/revenue_discount_data.csv')
+
+# Aggregate by category
+result = df.groupby('category')[['before_discount', 'after_discount']].sum().reset_index()
+result['discount_impact'] = result['before_discount'] - result['after_discount']
+
+# Plot
+bar_width = 0.35
+index = range(len(result))
+plt.figure(figsize=(10,6))
+plt.bar(index, result['before_discount'], bar_width, label='Before Discount')
+plt.bar([i + bar_width for i in index], result['after_discount'], bar_width, label='After Discount')
+plt.xticks([i + bar_width/2 for i in index], result['category'], rotation=45)
+plt.ylabel('Total Revenue')
+plt.title('Total Revenue Before & After Discount by Category')
+plt.legend()
+plt.tight_layout()
+plt.savefig('images/discount_impact_bar.png')
+plt.show()
